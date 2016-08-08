@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/security
+    http://www.springframework.org/schema/security/spring-security.xsd">
+
+    <security:http pattern="/static/**" security="none"/>
+    <security:http pattern="/**/*.css" security="none"/>
+    <security:http pattern="/**/*.jpg" security="none"/>
+    <security:http pattern="/**/*.jpeg" security="none"/>
+    <security:http pattern="/**/*.gif" security="none"/>
+    <security:http pattern="/**/*.png" security="none"/>
+    <security:http pattern="/**/*.js" security="none"/>
+    <security:http pattern="/favicon.ico" security="none"/>
+    <security:http pattern="403.jsp" security="none"/>
+    <security:http pattern="/login*" security="none"/>
+    <security:http pattern="/authentication" security="none"/>
+    <!--<security:http pattern="/" security="none"/>-->
+
+    <security:http
+            use-expressions="true"
+            auto-config="true">
+        <security:intercept-url pattern="/**" access="isAuthenticated()"/>
+        <security:headers>
+            <security:frame-options disabled="true"/>
+        </security:headers>
+        <security:form-login
+                login-page="/login"
+                authentication-failure-url="/login?e=true" authentication-failure-handler-ref=""/>
+
+        <security:logout
+                logout-success-url="/login"
+                invalidate-session="true"/>
+
+        <security:remember-me
+                user-service-ref="sysUserService"
+                key="imc"
+                remember-me-parameter="rememberMe"/>
+
+        <security:custom-filter ref="customSecurityFilter" before="FILTER_SECURITY_INTERCEPTOR"/>
+
+    </security:http>
+
+    <security:authentication-manager alias="authenticationManager" erase-credentials="false">
+        <security:authentication-provider user-service-ref="sysUserService">
+            <security:password-encoder ref="passwordEncoder"></security:password-encoder>
+        </security:authentication-provider>
+    </security:authentication-manager>
+
+    <!--密码加密：使用哈希算法加密，加密强度为256-->
+    <bean id="passwordEncoder" class="org.springframework.security.authentication.encoding.ShaPasswordEncoder">
+        <constructor-arg value="256"/>
+        <property name="encodeHashAsBase64" value="false"/>
+    </bean>
+
+    <bean id="customSecurityFilter" class="com.imchuan.security.filter.CustomSecurityFilter">
+        <property name="authenticationManager" ref="authenticationManager"/>
+        <property name="accessDecisionManager" ref="customAccessDecisionManager"/>
+        <property name="securityMetadataSource" ref="customSecurityMetadataSource"/>
+    </bean>
+    <bean id="customAccessDecisionManager" class="com.imchuan.security.CustomAccessDecisionManager"/>
+    <bean id="customSecurityMetadataSource" class="com.imchuan.security.CustomSecurityMetadataSource">
+        <property name="sysResourceService" ref="sysResourceService"/>
+    </bean>
+    <!--remember me end-->
+    <bean id="rememberMeFilter" class="org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter">
+        <constructor-arg index="0" ref="authenticationManager"/>
+        <constructor-arg index="1" ref="rememberMeServices"/>
+    </bean>
+
+    <bean id="rememberMeServices" class="org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices">
+        <constructor-arg index="0" value="imchuan"/>
+        <constructor-arg index="1" ref="sysUserService"/>
+    </bean>
+
+    <bean id="rememberMeAuthenticationProvider" class="org.springframework.security.authentication.RememberMeAuthenticationProvider">
+        <constructor-arg value="imchuan"/>
+    </bean>
+    <!--remember me end-->
+
+</beans>
